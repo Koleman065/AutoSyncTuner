@@ -133,10 +133,12 @@ jobs:
             -configuration Release -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/AutoSyncTuner.xcarchive" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
-            CODE_SIGN_STYLE=Automatic CODE_SIGN_IDENTITY="Apple Distribution" \
-            "${AUTH[@]}" archive | tail -n 60
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            archive | tail -n 60
           [ "${PIPESTATUS[0]}" = 0 ] || exit 1
 
+          # The archive is built unsigned; the export signs it for the App Store
+          # (Apple creates the distribution certificate/profile through the API key).
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/AutoSyncTuner.xcarchive" \
             -exportOptionsPlist iosApp/ExportOptions.plist -exportPath "$RUNNER_TEMP/export" \
             "${AUTH[@]}" | tail -n 40
