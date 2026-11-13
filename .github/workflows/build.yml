@@ -75,6 +75,14 @@ jobs:
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
       - uses: actions/checkout@v4
+
+      # App Store Connect requires apps built with the iOS 26 SDK (Xcode 26+).
+      - name: Select Xcode 26
+        run: |
+          XC=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -n 1)
+          sudo xcode-select -s "$XC"
+          xcodebuild -version
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
