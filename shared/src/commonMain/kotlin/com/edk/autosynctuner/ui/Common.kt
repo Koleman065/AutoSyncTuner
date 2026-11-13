@@ -55,7 +55,7 @@ fun friendlyError(e: Throwable): String = when (e) {
     is SiteChangedException -> "The AutoSync website looks different than expected (${e.message}). The app may need an update."
     is NetworkException -> "${e.message} Check your connection and try again."
     is IllegalArgumentException -> e.message ?: "That value isn't allowed."
-    else -> e.message ?: e.javaClass.simpleName
+    else -> e.message ?: (e::class.simpleName ?: "Unexpected error")
 }
 
 @Composable
