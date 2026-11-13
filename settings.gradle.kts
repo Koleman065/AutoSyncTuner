@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "AutoSyncTuner"
-include(":app")
+include(":shared", ":androidApp")
