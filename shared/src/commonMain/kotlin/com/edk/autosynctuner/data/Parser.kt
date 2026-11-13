@@ -22,14 +22,31 @@ object Parser {
 
     // ---- Profile page (/users/me/) -------------------------------------------------
 
-    fun parseVehicles(html: String, baseUri: String): List<Vehicle> {
+    fun parseProfile(html: String, baseUri: String): Profile {
         val doc = Ksoup.parse(html = html, baseUri = baseUri)
-        return doc.select("a[href]").mapNotNull { a ->
-            val path = pathOf(a)
-            val vin = VIN_PATH.find(path)?.groupValues?.get(1) ?: return@mapNotNull null
-            val desc = a.text().removePrefix(vin).trim()
+
+        // Vehicles: every link to /tuning/<VIN>/ (the "Vehicles" panel).
+        val vehicles = doc.select("a[href]").mapNotNull { a ->
+            val vin = VIN_PATH.find(pathOf(a))?.groupValues?.get(1) ?: return@mapNotNull null
+            val bold = a.selectFirst("strong")?.text()?.trim()
+            val desc = (if (bold == vin) a.ownText() else a.text().removePrefix(vin)).trim()
             Vehicle(vin, desc)
         }.distinctBy { it.vin }
+
+        // Devices: the "AutoSync Devices" panel, one list item per module:
+        // <li><span><strong>13CDF0</strong></span> AutoSync-v3.95 - Update required</li>
+        val devicePanel = doc.select(".panel").firstOrNull { p ->
+            p.selectFirst("> .panel-heading")?.text()?.contains("AutoSync Devices", ignoreCase = true) == true
+        }
+        val devices = devicePanel?.select("li")?.mapNotNull { li ->
+            val serial = li.selectFirst("strong")?.text()?.trim()?.ifBlank { null } ?: return@mapNotNull null
+            val rest = li.text().trim().removePrefix(serial).trim()
+            val firmware = rest.substringBefore(" - ").trim()
+            val note = rest.substringAfter(" - ", "").trim().ifBlank { null }
+            Device(serial, firmware, note)
+        }.orEmpty()
+
+        return Profile(vehicles, devices)
     }
 
     // ---- Vehicle page (/tuning/<VIN>/) ---------------------------------------------

@@ -8,7 +8,10 @@ phone-friendly controls and saves them back to your AutoSync account.
 
 - Sign in with your AutoSync Manager email and password. The password isn't stored;
   the app keeps the website's sign-in cookie, so you stay signed in until you sign out.
-- Lists the vehicles on your profile, then every setting grouped by module (BCM, IPC,
+- Lists every vehicle on your account and the AutoSync modules registered to it.
+  Pick a vehicle to see its settings; tap the vehicle name (or ⇄) to switch. The app
+  reopens the last vehicle you used.
+- Settings are grouped by module (BCM, IPC,
   EBCM, HVAC, Radio, HMI) and category, with search across all settings.
 - Each setting page shows the description, stock value, range and status (stock or
   customized), plus a control that fits the setting:

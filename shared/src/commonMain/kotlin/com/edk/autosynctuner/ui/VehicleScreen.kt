@@ -13,11 +13,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -32,25 +33,24 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.edk.autosynctuner.data.AutoSyncClient
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VehicleScreen(
     client: AutoSyncClient,
     vin: String,
+    vehicleName: String,
     onOpenSetting: (id: String, name: String) -> Unit,
-    onBack: (() -> Unit)?,
-    onSignOut: () -> Unit,
+    onSwitchVehicle: () -> Unit,
     onSignedOut: () -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
     val loader = rememberLoad(vin, onSignedOut = onSignedOut) { refresh -> client.modules(vin, refresh) }
     var selectedModule by rememberSaveable { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
@@ -58,17 +58,22 @@ fun VehicleScreen(
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Column { Text("Tune Customization"); Text(vin, style = MaterialTheme.typography.labelSmall) } },
+            // Tapping the vehicle name opens the vehicle picker.
+            title = {
+                Column(Modifier.clickable(onClick = onSwitchVehicle)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(vehicleName.ifBlank { "Tune Customization" }, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Icon(Icons.Filled.ArrowDropDown, null)
+                    }
+                    Text(vin, style = MaterialTheme.typography.labelSmall)
+                }
+            },
             navigationIcon = {
-                onBack?.let { IconButton(onClick = it) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
+                IconButton(onClick = onSwitchVehicle) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Vehicles") }
             },
             actions = {
+                IconButton(onClick = onSwitchVehicle) { Icon(Icons.Filled.SwapHoriz, "Switch vehicle") }
                 IconButton(onClick = loader.reload) { Icon(Icons.Filled.Refresh, "Reload") }
-                if (onBack == null) {
-                    IconButton(onClick = { scope.launch { client.logout(); onSignOut() } }) {
-                        Icon(Icons.AutoMirrored.Filled.Logout, "Sign out")
-                    }
-                }
             },
         )
     }) { pad ->

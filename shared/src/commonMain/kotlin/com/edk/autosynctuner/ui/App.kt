@@ -16,7 +16,7 @@ sealed interface Screen {
 
     data object Login : Screen { override val key = "login" }
     data object Vehicles : Screen { override val key = "vehicles" }
-    data class Vehicle(val vin: String) : Screen { override val key = "vehicle/$vin" }
+    data class Vehicle(val vin: String, val name: String) : Screen { override val key = "vehicle/$vin" }
     data class Setting(val vin: String, val id: String, val name: String) : Screen {
         override val key = "setting/$vin/$id"
     }
@@ -25,36 +25,65 @@ sealed interface Screen {
 @Composable
 fun App(client: AutoSyncClient, store: KeyValueStore) {
     AppTheme {
-        var stack by remember { mutableStateOf(listOf(if (client.hasSession) Screen.Vehicles else Screen.Login)) }
+        // The vehicle picker is always at the bottom of the stack, so Back (or the
+        // vehicle name in the title bar) always leads to it. On launch the app reopens
+        // the vehicle used last on this phone.
+        fun signedInStack(): List<Screen> {
+            val last = client.lastVin
+            return if (last != null) {
+                listOf(Screen.Vehicles, Screen.Vehicle(last, store.get("lastVehicleName").orEmpty()))
+            } else {
+                listOf(Screen.Vehicles)
+            }
+        }
+
+        var stack by remember { mutableStateOf(if (client.hasSession) signedInStack() else listOf(Screen.Login)) }
+        // With only one vehicle on the account, skip the picker the first time it appears.
+        var autoOpenDone by remember { mutableStateOf(client.lastVin != null) }
         val saved = rememberSaveableStateHolder()
 
         fun push(s: Screen) { stack = stack + s }
         fun pop() { if (stack.size > 1) stack = stack.dropLast(1) }
-        fun reset(s: Screen) {
+        fun reset(newStack: List<Screen>) {
             stack.forEach { saved.removeState(it.key) }
-            stack = listOf(s)
+            stack = newStack
         }
-        val signedOut = { client.clearCache(); reset(Screen.Login) }
+        fun openVehicle(vin: String, name: String) {
+            client.lastVin = vin
+            store.put("lastVehicleName", name)
+            // Replace whatever vehicle was open with the chosen one, on top of the picker.
+            stack.filterIsInstance<Screen.Vehicle>().forEach { saved.removeState(it.key) }
+            stack = listOf(Screen.Vehicles, Screen.Vehicle(vin, name))
+        }
+        val signedOut = {
+            client.clearCache()
+            reset(listOf(Screen.Login))
+        }
 
         PlatformBackHandler(enabled = stack.size > 1) { pop() }
 
         val screen = stack.last()
         saved.SaveableStateProvider(screen.key) {
             when (screen) {
-                Screen.Login -> LoginScreen(client, store) { reset(Screen.Vehicles) }
+                Screen.Login -> LoginScreen(client, store) {
+                    client.lastVin = null
+                    autoOpenDone = false
+                    reset(listOf(Screen.Vehicles))
+                }
                 Screen.Vehicles -> VehiclesScreen(
                     client = client,
-                    onOpen = { vin, single ->
-                        if (single) reset(Screen.Vehicle(vin)) else push(Screen.Vehicle(vin))
-                    },
+                    currentVin = client.lastVin,
+                    autoOpenSingle = !autoOpenDone,
+                    onAutoOpenChecked = { autoOpenDone = true },
+                    onOpen = { v -> openVehicle(v.vin, v.shortName) },
                     onSignedOut = signedOut,
                 )
                 is Screen.Vehicle -> VehicleScreen(
                     client = client,
                     vin = screen.vin,
+                    vehicleName = screen.name,
                     onOpenSetting = { id, name -> push(Screen.Setting(screen.vin, id, name)) },
-                    onBack = if (stack.size > 1) ({ pop() }) else null,
-                    onSignOut = signedOut,
+                    onSwitchVehicle = { pop() },
                     onSignedOut = signedOut,
                 )
                 is Screen.Setting -> SettingScreen(

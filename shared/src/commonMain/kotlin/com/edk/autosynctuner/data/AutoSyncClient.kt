@@ -89,20 +89,25 @@ class AutoSyncClient(private val store: KeyValueStore) {
 
     // The vehicle list and settings tree rarely change, so they're kept in memory
     // (pull Reload to refresh). Individual settings are always loaded fresh.
-    private var vehicleCache: List<Vehicle>? = null
+    private var profileCache: Profile? = null
     private val moduleCache = mutableMapOf<String, List<Module>>()
 
     fun clearCache() {
-        vehicleCache = null
+        profileCache = null
         moduleCache.clear()
     }
 
-    suspend fun vehicles(refresh: Boolean = false): List<Vehicle> {
-        if (!refresh) vehicleCache?.let { return it }
+    suspend fun profile(refresh: Boolean = false): Profile {
+        if (!refresh) profileCache?.let { return it }
         val url = "$BASE/users/me/"
         val page = get(url)
-        return parse { Parser.parseVehicles(page.body, url) }.also { vehicleCache = it }
+        return parse { Parser.parseProfile(page.body, url) }.also { profileCache = it }
     }
+
+    /** The vehicle last opened on this phone, so the app can go straight back to it. */
+    var lastVin: String?
+        get() = store.get("lastVin")
+        set(value) = store.put("lastVin", value)
 
     suspend fun modules(vin: String, refresh: Boolean = false): List<Module> {
         if (!refresh) moduleCache[vin]?.let { return it }
