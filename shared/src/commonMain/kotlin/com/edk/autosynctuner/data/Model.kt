@@ -1,7 +1,23 @@
 package com.edk.autosynctuner.data
 
 /** A vehicle listed on the user's AutoSync profile. */
-data class Vehicle(val vin: String, val description: String)
+data class Vehicle(val vin: String, val description: String) {
+    /** "2018 CHEVROLET Silverado 2500 4WD 4D 6.6 Diesel" -> "2018 Chevrolet Silverado 2500" */
+    val shortName: String
+        get() {
+            val words = description.split(' ').filter { it.isNotBlank() }
+            if (words.isEmpty()) return vin
+            return words.take(4).joinToString(" ") { w ->
+                if (w.length > 3 && w.all { it.isUpperCase() || !it.isLetter() }) w.lowercase().replaceFirstChar { it.uppercase() } else w
+            }
+        }
+}
+
+/** An AutoSync module registered to the account, e.g. serial "13CDF0", firmware "AutoSync-v3.95". */
+data class Device(val serial: String, val firmware: String, val note: String?)
+
+/** What the profile page lists: the vehicles you can tune and the AutoSync modules on the account. */
+data class Profile(val vehicles: List<Vehicle>, val devices: List<Device>)
 
 /** One entry in the vehicle's settings tree. */
 data class SettingRef(val id: String, val name: String)

@@ -12,6 +12,20 @@ import kotlin.test.Test
 class ParserTest {
     private val base = "https://autosync.btdieselworks.com/tuning/1GC1KWEY5JF237761/"
 
+    @Test fun profileVehiclesAndDevices() {
+        val p = Parser.parseProfile(Fixtures.PROFILE, "https://autosync.btdieselworks.com/users/me/")
+        assertEquals(listOf("1GC1KWEY5JF237761", "1GT12UEY0LF123456"), p.vehicles.map { it.vin })
+        assertEquals("2018 CHEVROLET Silverado 2500 4WD 4D 6.6 Diesel", p.vehicles[0].description)
+        assertEquals("2018 Chevrolet Silverado 2500", p.vehicles[0].shortName)
+        assertEquals("2020 GMC Sierra 2500", p.vehicles[1].shortName)
+        assertEquals(2, p.devices.size)
+        assertEquals("13CDF0", p.devices[0].serial)
+        assertEquals("AutoSync-v3.95", p.devices[0].firmware)
+        assertEquals("Update required", p.devices[0].note)
+        assertEquals("AutoSync-v4.10", p.devices[1].firmware)
+        assertNull(p.devices[1].note)
+    }
+
     @Test fun vehicleTree() {
         val modules = Parser.parseModules(Fixtures.VEHICLE, base)
         assertEquals(listOf("BCM", "IPC"), modules.map { it.code })
