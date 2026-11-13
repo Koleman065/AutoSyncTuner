@@ -1,6 +1,6 @@
 # AutoSync Tuner
 
-A native Android app for the BT DieselWorks **AutoSync Manager** website
+A native app for the BT DieselWorks **AutoSync Manager** website
 (autosync.btdieselworks.com). It shows your truck's tune-customization settings with
 phone-friendly controls and saves them back to your AutoSync account.
 
