@@ -10,6 +10,9 @@ import com.edk.autosynctuner.platformColorScheme
 
 private val Red = Color(0xFFC62828)
 
+/** Used for "Licensed - Ready" marks; readable on light and dark backgrounds. */
+val LicensedGreen = Color(0xFF2E9E44)
+
 @Composable
 fun AppTheme(content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()

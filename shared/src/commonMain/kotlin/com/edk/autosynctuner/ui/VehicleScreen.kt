@@ -14,6 +14,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Refresh
@@ -21,6 +24,11 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.platform.LocalUriHandler
+import com.edk.autosynctuner.data.ModuleLicense
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,11 +55,11 @@ fun VehicleScreen(
     client: AutoSyncClient,
     vin: String,
     vehicleName: String,
-    onOpenSetting: (id: String, name: String) -> Unit,
+    onOpenSetting: (id: String, name: String, license: ModuleLicense?) -> Unit,
     onSwitchVehicle: () -> Unit,
     onSignedOut: () -> Unit,
 ) {
-    val loader = rememberLoad(vin, onSignedOut = onSignedOut) { refresh -> client.modules(vin, refresh) }
+    val loader = rememberLoad(vin, onSignedOut = onSignedOut) { refresh -> client.vehicle(vin, refresh) }
     var selectedModule by rememberSaveable { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
     var expanded by rememberSaveable { mutableStateOf(listOf<String>()) }
@@ -77,19 +85,63 @@ fun VehicleScreen(
             },
         )
     }) { pad ->
-        LoadView(loader, Modifier.padding(pad)) { modules ->
+        LoadView(loader, Modifier.padding(pad)) { vehicle ->
+            val modules = vehicle.modules
             val module = modules.firstOrNull { it.code == selectedModule } ?: modules.firstOrNull()
+            val uriHandler = LocalUriHandler.current
             Column(Modifier.fillMaxSize().padding(pad)) {
                 Row(
                     Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     modules.forEach { m ->
+                        val lic = vehicle.licenseFor(m.code)
                         FilterChip(
                             selected = query.isBlank() && m.code == module?.code,
                             onClick = { selectedModule = m.code; query = "" },
                             label = { Text("${m.code} (${m.settingCount})") },
+                            // Same information as the website's "Tune Status" list:
+                            // a check for "Licensed - Ready", a lock for "Get License".
+                            leadingIcon = when {
+                                lic == null -> null
+                                lic.licensed -> {
+                                    { Icon(Icons.Filled.CheckCircle, "Licensed", Modifier.size(FilterChipDefaults.IconSize), tint = LicensedGreen) }
+                                }
+                                else -> {
+                                    { Icon(Icons.Filled.Lock, "Not licensed", Modifier.size(FilterChipDefaults.IconSize)) }
+                                }
+                            },
                         )
+                    }
+                }
+                // Status line for the selected module.
+                if (query.isBlank() && module != null) {
+                    vehicle.licenseFor(module.code)?.let { lic ->
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                if (lic.licensed) Icons.Filled.CheckCircle else Icons.Filled.Lock, null,
+                                Modifier.size(16.dp),
+                                tint = if (lic.licensed) LicensedGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                listOf(lic.description.ifBlank { lic.code }, if (lic.licensed) lic.status else "Not licensed")
+                                    .joinToString(" · "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (lic.licensed) LicensedGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f).padding(start = 6.dp),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (!lic.licensed && lic.licenseUrl != null) {
+                                TextButton(onClick = { runCatching { uriHandler.openUri(lic.licenseUrl) } }) {
+                                    Text("Get license")
+                                    Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(14.dp).padding(start = 2.dp))
+                                }
+                            }
+                        }
                     }
                 }
                 OutlinedTextField(
@@ -112,8 +164,11 @@ fun VehicleScreen(
                         items(hits, key = { "${it.first.code}/${it.second.name}/${it.third.id}" }) { (m, c, s) ->
                             ListItem(
                                 headlineContent = { Text(s.name) },
-                                supportingContent = { Text("${m.code} · ${c.name}") },
-                                modifier = Modifier.clickable { onOpenSetting(s.id, s.name) },
+                                supportingContent = {
+                                    val locked = vehicle.licenseFor(m.code)?.licensed == false
+                                    Text("${m.code} · ${c.name}" + if (locked) " · not licensed" else "")
+                                },
+                                modifier = Modifier.clickable { onOpenSetting(s.id, s.name, vehicle.licenseFor(m.code)) },
                             )
                             HorizontalDivider()
                         }
@@ -139,7 +194,7 @@ fun VehicleScreen(
                                     ListItem(
                                         headlineContent = { Text(s.name) },
                                         modifier = Modifier
-                                            .clickable { onOpenSetting(s.id, s.name) }
+                                            .clickable { onOpenSetting(s.id, s.name, vehicle.licenseFor(module.code)) }
                                             .padding(start = 16.dp),
                                     )
                                 }

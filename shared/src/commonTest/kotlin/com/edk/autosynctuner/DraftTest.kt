@@ -11,7 +11,7 @@ import kotlin.test.Test
 
 /** Edit/validate/read-back logic, checked against the same real-page fixtures. */
 class DraftTest {
-    private val base = "https://autosync.btdieselworks.com/tuning/1GC1KWEY5JF237761/"
+    private val base = "https://autosync.btdieselworks.com/tuning/1GC1KXEY0JF000001/"
     private fun page(id: String, html: String) = Parser.parseSetting(id, html, "$base$id/")
 
     @Test fun lampThemeDescribesLampNames() {

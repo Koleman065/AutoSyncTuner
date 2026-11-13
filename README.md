@@ -11,6 +11,11 @@ phone-friendly controls and saves them back to your AutoSync account.
 - Lists every vehicle on your account and the AutoSync modules registered to it.
   Pick a vehicle to see its settings; tap the vehicle name (or ⇄) to switch. The app
   reopens the last vehicle you used.
+- Each module tab shows its license status from the website's "Tune Status" list: a green
+  check for "Licensed - Ready", a lock (with a Get license link) otherwise. Unlicensed
+  modules can still be browsed.
+- Android: checks for a newer build at launch and from "Check for updates" on the
+  Vehicles screen. iPhone updates come through TestFlight.
 - Settings are grouped by module (BCM, IPC,
   EBCM, HVAC, Radio, HMI) and category, with search across all settings.
 - Each setting page shows the description, stock value, range and status (stock or

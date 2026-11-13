@@ -2,6 +2,8 @@ package com.edk.autosynctuner
 
 import com.edk.autosynctuner.data.Editor
 import com.edk.autosynctuner.data.Parser
+import com.edk.autosynctuner.data.UpdateChecker
+import com.edk.autosynctuner.data.VehicleSettings
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -10,20 +12,47 @@ import kotlin.test.Test
 
 /** Runs the parser against trimmed copies of real AutoSync Manager pages. */
 class ParserTest {
-    private val base = "https://autosync.btdieselworks.com/tuning/1GC1KWEY5JF237761/"
+    private val base = "https://autosync.btdieselworks.com/tuning/1GC1KXEY0JF000001/"
 
     @Test fun profileVehiclesAndDevices() {
         val p = Parser.parseProfile(Fixtures.PROFILE, "https://autosync.btdieselworks.com/users/me/")
-        assertEquals(listOf("1GC1KWEY5JF237761", "1GT12UEY0LF123456"), p.vehicles.map { it.vin })
+        assertEquals(listOf("1GC1KXEY0JF000001", "1GT12UEY0LF123456"), p.vehicles.map { it.vin })
         assertEquals("2018 CHEVROLET Silverado 2500 4WD 4D 6.6 Diesel", p.vehicles[0].description)
         assertEquals("2018 Chevrolet Silverado 2500", p.vehicles[0].shortName)
         assertEquals("2020 GMC Sierra 2500", p.vehicles[1].shortName)
         assertEquals(2, p.devices.size)
-        assertEquals("13CDF0", p.devices[0].serial)
+        assertEquals("1A2B3C", p.devices[0].serial)
         assertEquals("AutoSync-v3.95", p.devices[0].firmware)
         assertEquals("Update required", p.devices[0].note)
         assertEquals("AutoSync-v4.10", p.devices[1].firmware)
         assertNull(p.devices[1].note)
+    }
+
+    @Test fun moduleLicenses() {
+        val l = Parser.parseLicenses(Fixtures.TUNE_STATUS, base)
+        assertEquals(setOf("HVAC", "Radio", "HMI", "BCM"), l.keys)
+        val bcm = l.getValue("BCM")
+        assertTrue(bcm.licensed)
+        assertEquals("Licensed - Ready", bcm.status)
+        assertEquals("Body Control Module", bcm.description)
+        assertNull(bcm.licenseUrl)
+        val hmi = l.getValue("HMI")
+        assertFalse(hmi.licensed)
+        assertEquals("Get License", hmi.status)
+        assertEquals("https://www.customcalibrationengineering.com/products/hmi-tuning", hmi.licenseUrl)
+        assertEquals("https://www.btdieselworks.com", l.getValue("HVAC").licenseUrl) // site omits https://
+        val vs = VehicleSettings(Parser.parseModules(Fixtures.VEHICLE, base), l)
+        assertEquals(true, vs.licenseFor("bcm")?.licensed)
+        assertNull(vs.licenseFor("IPC")) // module with no Tune Status row
+    }
+
+    @Test fun updateManifest() {
+        val u = UpdateChecker.parseManifest(
+            """{"versionCode": 14, "versionName": "0.4.0", "apkUrl": "https://github.com/x/y/releases/download/latest/AutoSyncTuner.apk"}""",
+        )!!
+        assertEquals(14L, u.versionCode)
+        assertEquals("0.4.0", u.versionName)
+        assertNull(UpdateChecker.parseManifest("""{"versionCode": 3, "apkUrl": "http://insecure"}"""))
     }
 
     @Test fun vehicleTree() {

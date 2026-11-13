@@ -28,6 +28,26 @@ data class Module(val code: String, val categories: List<Category>) {
     val settingCount: Int get() = categories.sumOf { it.settings.size }
 }
 
+/**
+ * One row of the website's "Tune Status" list, e.g.
+ * BCM · Body Control Module · "Licensed - Ready", or HMI · ... · "Get License" (a link).
+ */
+data class ModuleLicense(
+    val code: String,
+    val description: String,
+    /** The status text exactly as the website shows it. */
+    val status: String,
+    val licensed: Boolean,
+    /** Where the website's "Get License" link points, if the module isn't licensed. */
+    val licenseUrl: String?,
+)
+
+/** Everything on a vehicle's tuning page: the settings tree plus each module's license status. */
+data class VehicleSettings(val modules: List<Module>, val licenses: Map<String, ModuleLicense>) {
+    fun licenseFor(moduleCode: String): ModuleLicense? =
+        licenses[moduleCode] ?: licenses.entries.firstOrNull { it.key.equals(moduleCode, ignoreCase = true) }?.value
+}
+
 /** A choice for Yes/No-style and dropdown settings. */
 data class Choice(val value: String, val label: String)
 

@@ -90,11 +90,11 @@ class AutoSyncClient(private val store: KeyValueStore) {
     // The vehicle list and settings tree rarely change, so they're kept in memory
     // (pull Reload to refresh). Individual settings are always loaded fresh.
     private var profileCache: Profile? = null
-    private val moduleCache = mutableMapOf<String, List<Module>>()
+    private val vehicleCache = mutableMapOf<String, VehicleSettings>()
 
     fun clearCache() {
         profileCache = null
-        moduleCache.clear()
+        vehicleCache.clear()
     }
 
     suspend fun profile(refresh: Boolean = false): Profile {
@@ -109,11 +109,13 @@ class AutoSyncClient(private val store: KeyValueStore) {
         get() = store.get("lastVin")
         set(value) = store.put("lastVin", value)
 
-    suspend fun modules(vin: String, refresh: Boolean = false): List<Module> {
-        if (!refresh) moduleCache[vin]?.let { return it }
+    suspend fun vehicle(vin: String, refresh: Boolean = false): VehicleSettings {
+        if (!refresh) vehicleCache[vin]?.let { return it }
         val url = "$BASE/tuning/$vin/"
         val page = get(url)
-        return parse { Parser.parseModules(page.body, url) }.also { moduleCache[vin] = it }
+        return parse {
+            VehicleSettings(Parser.parseModules(page.body, url), Parser.parseLicenses(page.body, url))
+        }.also { vehicleCache[vin] = it }
     }
 
     suspend fun setting(vin: String, id: String): SettingPage {

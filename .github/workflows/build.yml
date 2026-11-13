@@ -48,11 +48,16 @@ jobs:
           ./gradlew --no-daemon :androidApp:assembleRelease
           mkdir -p out
           cp androidApp/build/outputs/apk/release/androidApp-release.apk out/AutoSyncTuner.apk
+          # Read by the app's "Check for updates".
+          VERSION_NAME=$(grep '^VERSION_NAME=' gradle.properties | cut -d= -f2)
+          printf '{"versionCode": %s, "versionName": "%s", "apkUrl": "https://github.com/%s/releases/download/latest/AutoSyncTuner.apk"}\n' \
+            "$BUILD_NUMBER" "$VERSION_NAME" "$GITHUB_REPOSITORY" > out/version.json
+          cat out/version.json
 
       - uses: actions/upload-artifact@v4
         with:
           name: AutoSyncTuner-apk
-          path: out/AutoSyncTuner.apk
+          path: out/
 
       # Newest build on the Releases page, so it can be installed from a phone browser.
       - name: Publish "latest" release
@@ -61,7 +66,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest out/AutoSyncTuner.apk \
+          gh release create latest out/AutoSyncTuner.apk out/version.json \
             --title "Latest build #${{ github.run_number }} ($(git rev-parse --short HEAD))" \
             --notes "Android: open on your phone and tap AutoSyncTuner.apk. iPhone: install through TestFlight." \
             --latest
