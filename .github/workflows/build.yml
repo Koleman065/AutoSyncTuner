@@ -106,8 +106,26 @@ jobs:
       - name: Archive and upload to TestFlight
         if: env.ASC_KEY_ID != '' && github.ref == 'refs/heads/main'
         run: |
+          # Pasted IDs sometimes pick up stray spaces or line breaks.
+          ASC_KEY_ID=$(printf '%s' "$ASC_KEY_ID" | tr -d ' \r\n\t')
+          ASC_ISSUER_ID=$(printf '%s' "$ASC_ISSUER_ID" | tr -d ' \r\n\t')
+          APPLE_TEAM_ID=$(printf '%s' "$APPLE_TEAM_ID" | tr -d ' \r\n\t')
           KEY="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
-          printf '%s' "$ASC_KEY_P8" > "$KEY"
+          # Rebuild the .p8 from whatever was pasted into the secret: the whole file,
+          # the file with line breaks lost or turned into spaces, Windows line endings,
+          # just the key body, or the file base64-encoded.
+          RAW=$(printf '%s' "$ASC_KEY_P8" | tr -d '\r')
+          if ! printf '%s' "$RAW" | grep -q 'PRIVATE KEY'; then
+            DECODED=$(printf '%s' "$RAW" | tr -d ' \n\t' | base64 -D 2>/dev/null || true)
+            if printf '%s' "$DECODED" | grep -q 'PRIVATE KEY'; then RAW="$DECODED"; fi
+          fi
+          BODY=$(printf '%s' "$RAW" | sed -e 's/-----BEGIN [A-Z ]*-----//g' -e 's/-----END [A-Z ]*-----//g' | tr -d ' \n\t\r')
+          if ! printf '%s' "$BODY" | base64 -D >/dev/null 2>&1 || [ ${#BODY} -lt 100 ]; then
+            echo "::error::ASC_KEY_P8 doesn't contain a valid App Store Connect key (key body is ${#BODY} characters; a .p8 key body is about 200). Paste the full contents of the AuthKey_XXXX.p8 file."
+            exit 1
+          fi
+          { echo "-----BEGIN PRIVATE KEY-----"; printf '%s' "$BODY" | fold -w 64; echo; echo "-----END PRIVATE KEY-----"; } > "$KEY"
+          echo "API key file rebuilt (${#BODY}-character key body, key ID length ${#ASC_KEY_ID}, issuer ID length ${#ASC_ISSUER_ID})"
           AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
           sed -i '' "s/TEAM_ID_PLACEHOLDER/$APPLE_TEAM_ID/" iosApp/ExportOptions.plist
 
