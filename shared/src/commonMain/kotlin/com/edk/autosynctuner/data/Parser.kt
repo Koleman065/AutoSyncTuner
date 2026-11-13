@@ -72,6 +72,26 @@ object Parser {
         }
     }
 
+    /** The vehicle page's "Tune Status" panel: one row per module with its license status. */
+    fun parseLicenses(html: String, baseUri: String): Map<String, ModuleLicense> {
+        val doc = Ksoup.parse(html = html, baseUri = baseUri)
+        val panel = doc.select(".panel").firstOrNull { p ->
+            p.selectFirst("> .panel-heading")?.text()?.contains("Tune Status", ignoreCase = true) == true
+        } ?: return emptyMap()
+        return panel.select("li").mapNotNull { li ->
+            val code = li.selectFirst("strong")?.text()?.trim()?.ifBlank { null } ?: return@mapNotNull null
+            val description = li.selectFirst("i")?.text()?.trim().orEmpty()
+            // Status sits after the left-hand label: plain text ("Licensed - Ready") or a link ("Get License").
+            val link = li.selectFirst("> a[href]")
+            val status = (link?.text() ?: li.ownText()).replace('\u00A0', ' ').trim().ifBlank { "Unknown" }
+            val licensed = link == null && status.startsWith("Licensed", ignoreCase = true)
+            val url = link?.attr("href")?.trim()?.takeIf { it.isNotEmpty() }?.let {
+                if (it.startsWith("http://") || it.startsWith("https://")) it else "https://" + it.removePrefix("//")
+            }
+            code to ModuleLicense(code, description, status, licensed, url)
+        }.toMap()
+    }
+
     // ---- Setting page (/tuning/<VIN>/<id>/) ----------------------------------------
 
     fun parseSetting(id: String, html: String, baseUri: String): SettingPage {

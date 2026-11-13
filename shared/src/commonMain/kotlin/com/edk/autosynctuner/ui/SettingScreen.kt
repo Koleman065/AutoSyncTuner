@@ -45,6 +45,9 @@ import androidx.compose.ui.unit.dp
 import com.edk.autosynctuner.data.AutoSyncClient
 import com.edk.autosynctuner.data.NewValue
 import com.edk.autosynctuner.data.Editor
+import com.edk.autosynctuner.data.ModuleLicense
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.material.icons.filled.Lock
 import com.edk.autosynctuner.data.NotLoggedInException
 import com.edk.autosynctuner.data.SettingPage
 import kotlinx.coroutines.launch
@@ -58,6 +61,7 @@ fun SettingScreen(
     vin: String,
     id: String,
     fallbackTitle: String,
+    license: ModuleLicense?,
     onBack: () -> Unit,
     onSignedOut: () -> Unit,
 ) {
@@ -73,7 +77,7 @@ fun SettingScreen(
         )
     }) { pad ->
         LoadView(loader, Modifier.padding(pad)) { loaded ->
-            SettingBody(client, vin, loaded, Modifier.padding(pad), onSignedOut)
+            SettingBody(client, vin, loaded, license, Modifier.padding(pad), onSignedOut)
         }
     }
 }
@@ -83,6 +87,7 @@ private fun SettingBody(
     client: AutoSyncClient,
     vin: String,
     loaded: SettingPage,
+    license: ModuleLicense?,
     modifier: Modifier,
     onSignedOut: () -> Unit,
 ) {
@@ -122,9 +127,30 @@ private fun SettingBody(
         modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+        // ---- License (from the website's "Tune Status" list) ----------------------------
+        if (license != null && !license.licensed) {
+            val uriHandler = LocalUriHandler.current
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
+                Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(Icons.Filled.Lock, null)
+                    Column(Modifier.weight(1f)) {
+                        Text("${license.code} isn't licensed on this account", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "The AutoSync website lists this module as \"${license.status}\". You can still view its settings here.",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        license.licenseUrl?.let { url ->
+                            TextButton(onClick = { runCatching { uriHandler.openUri(url) } }) { Text("Get license") }
+                        }
+                    }
+                }
+            }
+        }
+
         // ---- Facts ---------------------------------------------------------------------
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (license?.licensed == true) Fact(license.code, license.status)
                 Fact("Status", if (page.isCustomized) "Customized" else "Stock (not customized)")
                 page.stockValue?.let { Fact("Stock value", stockLabel(page, stockDraft) ?: it) }
                 page.range?.let { Fact("Range", it) }

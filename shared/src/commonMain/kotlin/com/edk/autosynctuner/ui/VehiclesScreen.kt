@@ -47,6 +47,7 @@ fun VehiclesScreen(
     autoOpenSingle: Boolean,
     onAutoOpenChecked: () -> Unit,
     onOpen: (Vehicle) -> Unit,
+    footer: @Composable () -> Unit,
     onSignedOut: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -127,6 +128,7 @@ fun VehiclesScreen(
                         )
                     }
                 }
+                item { footer() }
             }
         }
     }
