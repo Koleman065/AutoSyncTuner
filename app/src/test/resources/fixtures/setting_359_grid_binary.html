@@ -1,0 +1,20 @@
+<html><body><div class="container"><div class="col-sm-3"><i>sidebar</i></div><div class="col-sm-9"><div id="msg"></div><h3>Approach Lighting - Approach Lighting Theme</h3><p>"Approach Lighting" is the feature that automatically illuminates the vehicle interior and exterior lights when the keyfob "unlock" button is pressed at night/darkness.</p><p>-Cornering lights (if equipped)<br>-DRL (Daytime Running Lights)<br>-Fog lights</p><div><b>Stock Value:</b> [[0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0]]</div><div><b>Range:</b> 0 – 1 ___ 0 = No, 1 = Yes</div><div style="padding-top:10px;"><form action="#msg" method="post"><input type="hidden" name="csrfmiddlewaretoken" value="TESTTOKEN"><link href="/static/calibration/css/map.css" media="all" rel="stylesheet"><script src="/static/calibration/js/ag-grid/ag-grid-community.min.js"></script><script src="/static/calibration/js/map.js"></script><input type="hidden" id="map-data" name="custom_map" value="[[0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0]]"><div class="row"><center><b>Lamps</b></center></div><div class="row" style="margin-bottom: 5px;"><div id="myGrid" class="ag-theme-alpine" style="float: left; width: calc(100% - 20px);"></div></div><script>
+document.addEventListener('DOMContentLoaded', function () {
+ var gridDiv = document.querySelector('#myGrid');
+ new agGrid.Grid(gridDiv, gridOptions);
+ gridOptions.min_value = 0.00
+ gridOptions.max_value = 1.00
+ gridOptions.api.setColumnDefs([
+ { field: '0', headerName: 'Cornering'},
+ { field: '1', headerName: 'DRL'},
+ { field: '2', headerName: 'Fog'},
+ { field: '3', headerName: 'High Beam'},
+ { field: '4', headerName: 'Low Beam'},
+ { field: '5', headerName: 'Park'},
+ { field: '6', headerName: 'Puddle'},
+ { field: '7', headerName: 'Reverse'},
+ { field: '8', headerName: 'Turn'},
+ ])
+ gridOptions.api.setRowData([{},])
+ });
+</script><div class="form-group"><div id="div_id_enabled" class="checkbox"><label for="id_enabled" class=""><input type="checkbox" name="enabled" class="checkboxinput" id="id_enabled" checked=""> Setting Enabled </label></div></div><div class="form-group"><div class="controls "><input type="submit" name="update" value="Update" class="btn btn-primary btn-success" id="submit-id-update"><input type="submit" name="delete" value="Delete" class="btn btn-primary btn-danger" id="submit-id-delete"></div></div></form></div></div></div></body></html>
