@@ -64,7 +64,7 @@ fun VehicleScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var expanded by rememberSaveable { mutableStateOf(listOf<String>()) }
 
-    Scaffold(topBar = {
+    Scaffold(bottomBar = { DemoBar() }, topBar = {
         TopAppBar(
             // Tapping the vehicle name opens the vehicle picker.
             title = {

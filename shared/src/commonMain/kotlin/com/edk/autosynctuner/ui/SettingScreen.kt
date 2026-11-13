@@ -67,7 +67,7 @@ fun SettingScreen(
 ) {
     val loader = rememberLoad(vin, id, onSignedOut = onSignedOut) { client.setting(vin, id) }
 
-    Scaffold(topBar = {
+    Scaffold(bottomBar = { DemoBar() }, topBar = {
         TopAppBar(
             title = {
                 val t = @Suppress("UNCHECKED_CAST") (loader.state as? Load.Ready<SettingPage>)?.value?.title ?: fallbackTitle

@@ -54,6 +54,18 @@ class AutoSyncClient(private val store: KeyValueStore) {
 
     val hasSession: Boolean get() = cookies.has("sessionid")
 
+    // ---- Demo mode -------------------------------------------------------------------
+
+    private var demo: DemoBackend? = null
+
+    /** True while "Try demo" is active: sample data only, nothing is sent to the website. */
+    val isDemo: Boolean get() = demo != null
+
+    fun startDemo() {
+        demo = DemoBackend()
+        clearCache()
+    }
+
     // ---- Session ---------------------------------------------------------------------
 
     /** Signs in with the site's normal login form. Returns true on success. */
@@ -80,6 +92,11 @@ class AutoSyncClient(private val store: KeyValueStore) {
     }
 
     suspend fun logout() {
+        if (demo != null) {
+            demo = null
+            clearCache()
+            return
+        }
         runCatching { send(HttpMethod.Get, "$BASE/logout/") }
         cookies.clear()
         clearCache()
@@ -98,6 +115,7 @@ class AutoSyncClient(private val store: KeyValueStore) {
     }
 
     suspend fun profile(refresh: Boolean = false): Profile {
+        demo?.let { return it.profile() }
         if (!refresh) profileCache?.let { return it }
         val url = "$BASE/users/me/"
         val page = get(url)
@@ -105,11 +123,19 @@ class AutoSyncClient(private val store: KeyValueStore) {
     }
 
     /** The vehicle last opened on this phone, so the app can go straight back to it. */
+    /** In the demo these are kept in memory, so closing the demo leaves the real choice alone. */
+    private var demoLast: Pair<String?, String?> = null to null
+
     var lastVin: String?
-        get() = store.get("lastVin")
-        set(value) = store.put("lastVin", value)
+        get() = if (demo != null) demoLast.first else store.get("lastVin")
+        set(value) { if (demo != null) demoLast = value to demoLast.second else store.put("lastVin", value) }
+
+    var lastVehicleName: String?
+        get() = if (demo != null) demoLast.second else store.get("lastVehicleName")
+        set(value) { if (demo != null) demoLast = demoLast.first to value else store.put("lastVehicleName", value) }
 
     suspend fun vehicle(vin: String, refresh: Boolean = false): VehicleSettings {
+        demo?.let { return it.vehicle(vin) }
         if (!refresh) vehicleCache[vin]?.let { return it }
         val url = "$BASE/tuning/$vin/"
         val page = get(url)
@@ -119,6 +145,7 @@ class AutoSyncClient(private val store: KeyValueStore) {
     }
 
     suspend fun setting(vin: String, id: String): SettingPage {
+        demo?.let { return it.setting(vin, id) }
         val url = settingUrl(vin, id)
         val page = get(url)
         return parse { Parser.parseSetting(id, page.body, url) }
@@ -131,6 +158,10 @@ class AutoSyncClient(private val store: KeyValueStore) {
      * then returns the page the site sends back so the caller can confirm it stuck.
      */
     suspend fun save(vin: String, page: SettingPage, value: NewValue, enabled: Boolean): SettingPage {
+        demo?.let { d ->
+            addValueField(ParametersBuilder(), page, value) // same range/choice checks as a real save
+            return d.save(vin, page, value, enabled)
+        }
         val fields = form {
             append("csrfmiddlewaretoken", page.csrfToken)
             addValueField(this, page, value)
@@ -142,6 +173,7 @@ class AutoSyncClient(private val store: KeyValueStore) {
 
     /** Same as pressing Delete on the website: removes the custom value, back to stock. */
     suspend fun delete(vin: String, page: SettingPage): SettingPage {
+        demo?.let { return it.delete(vin, page) }
         val fields = form {
             append("csrfmiddlewaretoken", page.csrfToken)
             addEnabledField(this, page, page.enabled)

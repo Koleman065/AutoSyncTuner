@@ -6,6 +6,9 @@ phone-friendly controls and saves them back to your AutoSync account.
 
 ## What it does
 
+- **Try demo (no account needed)** on the sign-in screen opens a pretend account with two
+  trucks, licensed and unlicensed modules, and one of every kind of setting. Nothing is
+  sent anywhere; changes last until you exit the demo.
 - Sign in with your AutoSync Manager email and password. The password isn't stored;
   the app keeps the website's sign-in cookie, so you stay signed in until you sign out.
 - Lists every vehicle on your account and the AutoSync modules registered to it.
