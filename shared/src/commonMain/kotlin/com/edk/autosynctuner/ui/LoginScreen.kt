@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -32,7 +33,7 @@ import com.edk.autosynctuner.data.KeyValueStore
 import kotlinx.coroutines.launch
 
 @Composable
-fun LoginScreen(client: AutoSyncClient, store: KeyValueStore, onSignedIn: () -> Unit) {
+fun LoginScreen(client: AutoSyncClient, store: KeyValueStore, onSignedIn: () -> Unit, onTryDemo: () -> Unit) {
     var email by remember { mutableStateOf(store.get("email").orEmpty()) }
     var password by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
@@ -82,6 +83,9 @@ fun LoginScreen(client: AutoSyncClient, store: KeyValueStore, onSignedIn: () -> 
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Button(onClick = ::submit, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
                 if (busy) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp) else Text("Sign in")
+            }
+            OutlinedButton(onClick = onTryDemo, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                Text("Try demo (no account needed)")
             }
             Text(
                 "This app is not made by or affiliated with BT DieselWorks. It uses your AutoSync Manager " +

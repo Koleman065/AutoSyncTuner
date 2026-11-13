@@ -53,7 +53,7 @@ fun VehiclesScreen(
     val scope = rememberCoroutineScope()
     val loader = rememberLoad(Unit, onSignedOut = onSignedOut) { refresh -> client.profile(refresh) }
 
-    Scaffold(topBar = {
+    Scaffold(bottomBar = { DemoBar() }, topBar = {
         TopAppBar(
             title = { Text("Vehicles") },
             actions = {
