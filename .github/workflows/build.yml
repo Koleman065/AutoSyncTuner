@@ -156,3 +156,29 @@ jobs:
             -exportOptionsPlist iosApp/ExportOptions.plist -exportPath "$RUNNER_TEMP/export" \
             "${AUTH[@]}" | tail -n 40
           exit ${PIPESTATUS[0]}
+
+  # After the iPhone build reaches TestFlight: wait for Apple to process it, add it to
+  # every external tester group (public link included) and submit it for beta review.
+  testflight-distribute:
+    needs: ios
+    if: github.ref == 'refs/heads/main' && needs.ios.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyjwt cryptography
+      - name: Distribute to external testers
+        run: |
+          VERSION_NAME=$(grep '^VERSION_NAME=' gradle.properties | cut -d= -f2)
+          SUBJECT=$(git log -1 --format=%s | sed -E 's/ \(#[0-9]+\)$//')
+          python .github/scripts/testflight_distribute.py \
+            --bundle-id com.edk.autosynctuner \
+            --build "${{ github.run_number }}" \
+            --notes "Version $VERSION_NAME: $SUBJECT. Try changes in demo mode or on a vehicle where they're harmless, and report anything that looks wrong."
