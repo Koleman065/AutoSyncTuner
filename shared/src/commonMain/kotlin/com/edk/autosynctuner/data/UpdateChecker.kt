@@ -10,6 +10,8 @@ data class AppInfo(
     val versionCode: Long,
     /** Where to look for newer builds, or null where the store handles updates (iOS/TestFlight). */
     val updateManifestUrl: String?,
+    /** e.g. "Android 15" or "iOS 26.1", shown in feedback reports. */
+    val platform: String = "Unknown",
 )
 
 data class UpdateInfo(val versionName: String, val versionCode: Long, val downloadUrl: String)

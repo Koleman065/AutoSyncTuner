@@ -1,0 +1,93 @@
+name: Daily website check
+
+# Signs in to AutoSync Manager with the account in the AUTOSYNC_EMAIL / AUTOSYNC_PASSWORD
+# secrets and checks that the app still understands the website's pages. Read-only: it
+# never saves anything. If something breaks, it opens (or updates) a GitHub issue, which
+# emails the repository owner; when it passes again, it closes that issue.
+
+on:
+  schedule:
+    - cron: "17 11 * * *"   # every day, 6:17 AM Eastern (11:17 UTC)
+  # Also run when a pull request changes the check itself, so changes are tried for real.
+  pull_request:
+    paths:
+      - ".github/workflows/site-check.yml"
+      - "shared/src/androidUnitTest/**"
+      - "shared/src/commonMain/kotlin/com/edk/autosynctuner/data/**"
+  workflow_dispatch:
+    inputs:
+      check_all:
+        description: "Check every setting page (instead of today's slice of about 30)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: site-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Check the website (read-only)
+        id: check
+        env:
+          AUTOSYNC_EMAIL: ${{ secrets.AUTOSYNC_EMAIL }}
+          AUTOSYNC_PASSWORD: ${{ secrets.AUTOSYNC_PASSWORD }}
+          # Every setting page on pull requests and when asked; otherwise today's slice.
+          SITE_CHECK_ALL: ${{ (inputs.check_all || github.event_name == 'pull_request') && 'true' || 'false' }}
+          SITE_CHECK_REPORT: ${{ runner.temp }}/site-check.md
+        run: |
+          if [ -z "$AUTOSYNC_EMAIL" ] || [ -z "$AUTOSYNC_PASSWORD" ]; then
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              echo "::notice::No AutoSync secrets available to this pull request (e.g. from a fork); skipping the live check."
+              exit 0
+            fi
+            echo "::error::Add the AUTOSYNC_EMAIL and AUTOSYNC_PASSWORD repository secrets to enable this check."
+            exit 1
+          fi
+          ./gradlew --no-daemon -q :shared:testDebugUnitTest --tests 'com.edk.autosynctuner.LiveSiteCheck' > /dev/null 2>&1 || status=$?
+          # Gradle's own output is hidden; the report below is written to contain nothing personal.
+          if [ -f "$SITE_CHECK_REPORT" ]; then cat "$SITE_CHECK_REPORT" | tee -a "$GITHUB_STEP_SUMMARY"; else echo "No report was written." | tee -a "$GITHUB_STEP_SUMMARY"; fi
+          exit ${status:-0}
+
+      - name: Open or update the "website check failed" issue
+        if: failure() && steps.check.outcome == 'failure' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPORT: ${{ runner.temp }}/site-check.md
+        run: |
+          RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          BODY=$( { [ -f "$REPORT" ] && cat "$REPORT" || echo "The check could not run (no report). Most likely the website was unreachable or the secrets are missing."; echo; echo "Run: $RUN_URL"; } )
+          gh label create site-check --color B60205 --description "Daily website check" 2>/dev/null || true
+          NUM=$(gh issue list --label site-check --state open --json number --jq '.[0].number')
+          if [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --body "Still failing on $(date -u +%F).
+
+          $BODY"
+          else
+            gh issue create --label site-check --title "Daily website check failed: the app may not work with the AutoSync website" --body "The daily read-only check couldn't fully understand the AutoSync Manager website. BT DieselWorks may have changed a page, or the site may be down.
+
+          $BODY"
+          fi
+
+      - name: Close the issue when passing again
+        if: success() && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for NUM in $(gh issue list --label site-check --state open --json number --jq '.[].number'); do
+            gh issue close "$NUM" --comment "Website check is passing again ($(date -u +%F))."
+          done
