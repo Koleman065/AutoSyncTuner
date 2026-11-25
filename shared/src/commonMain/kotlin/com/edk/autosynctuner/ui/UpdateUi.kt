@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.edk.autosynctuner.data.AppInfo
+import com.edk.autosynctuner.data.Changelog
 import com.edk.autosynctuner.data.UpdateChecker
 import com.edk.autosynctuner.data.UpdateInfo
 import kotlinx.coroutines.launch
@@ -84,6 +85,9 @@ fun VersionFooter(app: AppInfo, checker: UpdateChecker) {
         message?.let {
             Text(it, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
         }
+        var showNotes by remember { mutableStateOf(false) }
+        TextButton(onClick = { showNotes = true }) { Text("What's new") }
+        if (showNotes) WhatsNewDialog(Changelog.releases.take(3)) { showNotes = false }
         FeedbackButton()
         Text(
             "Feedback opens a public GitHub form. Please don't include your password, email or VIN.",

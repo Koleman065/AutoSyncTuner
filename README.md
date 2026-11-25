@@ -35,6 +35,13 @@ phone-friendly controls and saves them back to your AutoSync account.
   **Remove customization** is the website's Delete button.
 - Values outside the range the website allows are blocked before anything is sent.
 
+## Release notes ("What's new")
+
+The app shows a "What's new" popup the first time it opens after an update (not on a
+fresh install), and it can be reopened from the vehicle list. The notes live in
+`shared/src/commonMain/.../data/Changelog.kt`: when you bump `VERSION_NAME`, add an entry at
+the top. The build fails if you forget.
+
 ## Feedback and the daily website check
 
 - **Send feedback** (vehicle list, sign-in screen, and "Report a problem with this setting"

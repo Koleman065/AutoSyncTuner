@@ -39,7 +39,13 @@ fun App(client: AutoSyncClient, store: KeyValueStore, appInfo: AppInfo) {
         LaunchedEffect(Unit) {
             if (updates.supported) pendingUpdate = runCatching { updates.check() }.getOrNull()
         }
-        pendingUpdate?.let { UpdateDialog(it, appInfo) { pendingUpdate = null } }
+        // "What's new" on the first run after an update; the update prompt waits until it's closed.
+        var whatsNew by remember { mutableStateOf(whatsNewAtLaunch(store, appInfo.versionName)) }
+        if (whatsNew.isNotEmpty()) {
+            WhatsNewDialog(whatsNew) { whatsNew = emptyList() }
+        } else {
+            pendingUpdate?.let { UpdateDialog(it, appInfo) { pendingUpdate = null } }
+        }
 
         // The vehicle picker is always at the bottom of the stack, so Back (or the
         // vehicle name in the title bar) always leads to it. On launch the app reopens
