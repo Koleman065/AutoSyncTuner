@@ -8,6 +8,12 @@ name: Daily website check
 on:
   schedule:
     - cron: "17 11 * * *"   # every day, 6:17 AM Eastern (11:17 UTC)
+  # Also run when a pull request changes the check itself, so changes are tried for real.
+  pull_request:
+    paths:
+      - ".github/workflows/site-check.yml"
+      - "shared/src/androidUnitTest/**"
+      - "shared/src/commonMain/kotlin/com/edk/autosynctuner/data/**"
   workflow_dispatch:
     inputs:
       check_all:
@@ -40,10 +46,15 @@ jobs:
         env:
           AUTOSYNC_EMAIL: ${{ secrets.AUTOSYNC_EMAIL }}
           AUTOSYNC_PASSWORD: ${{ secrets.AUTOSYNC_PASSWORD }}
-          SITE_CHECK_ALL: ${{ inputs.check_all && 'true' || 'false' }}
+          # Every setting page on pull requests and when asked; otherwise today's slice.
+          SITE_CHECK_ALL: ${{ (inputs.check_all || github.event_name == 'pull_request') && 'true' || 'false' }}
           SITE_CHECK_REPORT: ${{ runner.temp }}/site-check.md
         run: |
           if [ -z "$AUTOSYNC_EMAIL" ] || [ -z "$AUTOSYNC_PASSWORD" ]; then
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              echo "::notice::No AutoSync secrets available to this pull request (e.g. from a fork); skipping the live check."
+              exit 0
+            fi
             echo "::error::Add the AUTOSYNC_EMAIL and AUTOSYNC_PASSWORD repository secrets to enable this check."
             exit 1
           fi
@@ -53,7 +64,7 @@ jobs:
           exit ${status:-0}
 
       - name: Open or update the "website check failed" issue
-        if: failure() && steps.check.outcome == 'failure'
+        if: failure() && steps.check.outcome == 'failure' && github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
           REPORT: ${{ runner.temp }}/site-check.md
@@ -73,7 +84,7 @@ jobs:
           fi
 
       - name: Close the issue when passing again
-        if: success()
+        if: success() && github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
