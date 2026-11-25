@@ -1,0 +1,35 @@
+name: App feedback
+description: Report a problem or suggest an improvement for AutoSync Tuner
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying AutoSync Tuner! This page is **public**, so please don't include your
+        password, email address or your truck's VIN. Screenshots are welcome (cover any VIN first).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, or what would you like?
+      description: For a problem, what you tapped, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: input
+    id: setting
+    attributes:
+      label: Setting or screen (if it's about one)
+      placeholder: e.g. BCM · Approach Lighting Theme
+  - type: input
+    id: app_version
+    attributes:
+      label: App version and phone
+      description: Filled in automatically when you use "Send feedback" in the app.
+      placeholder: e.g. 0.6.0 (build 20) · Android 15
+  - type: dropdown
+    id: account
+    attributes:
+      label: Were you using a real AutoSync account or the demo?
+      options:
+        - Real account
+        - Demo mode
+        - Not signed in yet

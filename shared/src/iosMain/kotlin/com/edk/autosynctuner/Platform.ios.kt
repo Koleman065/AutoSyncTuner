@@ -9,6 +9,7 @@ import com.edk.autosynctuner.data.KeyValueStore
 import com.edk.autosynctuner.ui.App
 import platform.Foundation.NSBundle
 import platform.Foundation.NSUserDefaults
+import platform.UIKit.UIDevice
 import platform.UIKit.UIViewController
 
 class IosStore : KeyValueStore {
@@ -29,6 +30,7 @@ private val appInfo by lazy {
         versionName = info?.get("CFBundleShortVersionString") as? String ?: "?",
         versionCode = (info?.get("CFBundleVersion") as? String)?.toLongOrNull() ?: 0L,
         updateManifestUrl = null,
+        platform = "iOS " + UIDevice.currentDevice.systemVersion,
     )
 }
 

@@ -35,6 +35,18 @@ phone-friendly controls and saves them back to your AutoSync account.
   **Remove customization** is the website's Delete button.
 - Values outside the range the website allows are blocked before anything is sent.
 
+## Feedback and the daily website check
+
+- **Send feedback** (vehicle list, sign-in screen, and "Report a problem with this setting"
+  on every setting) opens this project's public GitHub feedback form with the app version
+  and phone type filled in. Nothing personal is added to it.
+- **Daily website check** (`.github/workflows/site-check.yml`): every morning GitHub signs
+  in with the account in the `AUTOSYNC_EMAIL` / `AUTOSYNC_PASSWORD` secrets and checks that
+  the app still understands the AutoSync Manager pages, a rotating slice of about 30
+  settings a day. It only reads pages, never saves. If something breaks, it opens a
+  `site-check` issue (which emails the repo owner) and closes it once it passes again. Run it
+  by hand from the Actions tab, optionally checking every setting at once.
+
 ## Building it
 
 1. Install **Android Studio** (any 2025 or newer release).

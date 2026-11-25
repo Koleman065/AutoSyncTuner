@@ -49,6 +49,8 @@ android {
     namespace = "com.edk.autosynctuner.shared"
     compileSdk = 35
     defaultConfig { minSdk = 26 }
+    // The live website check runs as a JVM unit test; return defaults for any Android call.
+    testOptions { unitTests.isReturnDefaultValues = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

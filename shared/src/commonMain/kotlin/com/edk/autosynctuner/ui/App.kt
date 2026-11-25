@@ -81,7 +81,7 @@ fun App(client: AutoSyncClient, store: KeyValueStore, appInfo: AppInfo) {
 
         val screen = stack.last()
         val exitDemo: (() -> Unit)? = if (client.isDemo) ({ scope.launch { client.logout(); signedOut() } }) else null
-        CompositionLocalProvider(LocalExitDemo provides exitDemo) {
+        CompositionLocalProvider(LocalExitDemo provides exitDemo, LocalAppInfo provides appInfo) {
         saved.SaveableStateProvider(screen.key) {
             when (screen) {
                 Screen.Login -> LoginScreen(

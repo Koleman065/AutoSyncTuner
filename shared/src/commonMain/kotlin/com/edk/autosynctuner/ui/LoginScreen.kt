@@ -95,6 +95,7 @@ fun LoginScreen(client: AutoSyncClient, store: KeyValueStore, onSignedIn: () -> 
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            FeedbackButton(label = "Trouble signing in? Send feedback")
         }
     }
 }

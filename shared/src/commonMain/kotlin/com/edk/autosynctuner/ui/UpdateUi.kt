@@ -84,6 +84,13 @@ fun VersionFooter(app: AppInfo, checker: UpdateChecker) {
         message?.let {
             Text(it, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
         }
+        FeedbackButton()
+        Text(
+            "Feedback opens a public GitHub form. Please don't include your password, email or VIN.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
     }
     found?.let { UpdateDialog(it, app) { found = null } }
 }

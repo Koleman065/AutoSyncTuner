@@ -247,6 +247,11 @@ private fun SettingBody(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        // Pre-fills the setting's name (never its value) so a broken page can be found quickly.
+        FeedbackButton(
+            label = "Report a problem with this setting",
+            setting = listOfNotNull(license?.code, page.title.ifBlank { null } ?: "setting ${page.id}").joinToString(" · ") + " (#${page.id})",
+        )
         Spacer(Modifier.size(24.dp))
     }
 

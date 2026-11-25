@@ -29,6 +29,7 @@ class App : Application() {
             versionCode = PackageInfoCompat.getLongVersionCode(pkg),
             // Published by the GitHub build next to the APK (see .github/workflows/build.yml).
             updateManifestUrl = "https://github.com/Koleman065/AutoSyncTuner/releases/download/latest/version.json",
+            platform = "Android ${android.os.Build.VERSION.RELEASE}",
         )
     }
 }
