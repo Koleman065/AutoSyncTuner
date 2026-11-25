@@ -72,7 +72,8 @@ jobs:
             --latest
 
   ios:
-    runs-on: macos-15
+    # Apple requires apps built with the iOS 27 SDK (Xcode 27) from April 2027.
+    runs-on: xcode-27
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -81,10 +82,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # App Store Connect requires apps built with the iOS 26 SDK (Xcode 26+).
-      - name: Select Xcode 26
+      # Newest stable Xcode 27 on the machine (falls back to a beta only if that's all there is).
+      - name: Select Xcode 27
         run: |
-          XC=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -n 1)
+          XC=$(ls -d /Applications/Xcode_27*.app | grep -iv beta | sort -V | tail -n 1)
+          [ -n "$XC" ] || XC=$(ls -d /Applications/Xcode_27*.app | sort -V | tail -n 1)
+          echo "Using $XC"
           sudo xcode-select -s "$XC"
           xcodebuild -version
 
