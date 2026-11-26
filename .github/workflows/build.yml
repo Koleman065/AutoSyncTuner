@@ -111,15 +111,43 @@ jobs:
           brew install xcodegen
           cd iosApp && DEVELOPMENT_TEAM="$APPLE_TEAM_ID" xcodegen generate
 
-      - name: Build for simulator (compile check)
-        if: env.ASC_KEY_ID == '' || github.ref != 'refs/heads/main'
+      # The simulator tests above leave Apple's simulator service running; Xcode 27's
+      # archive step can crash on it ("Invalid parameter not satisfying: devicePair").
+      # Shut it down so packaging starts clean.
+      - name: Reset simulator service
         run: |
-          xcodebuild -project iosApp/AutoSyncTuner.xcodeproj -scheme AutoSyncTuner \
-            -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build | tail -n 60
-          exit ${PIPESTATUS[0]}
+          xcrun simctl shutdown all 2>/dev/null || true
+          sudo killall -9 com.apple.CoreSimulator.CoreSimulatorService 2>/dev/null || true
+          sleep 3
+          xcrun simctl list devices >/dev/null 2>&1 || true
 
-      - name: Archive and upload to TestFlight
+      # Builds the real (unsigned) iPhone app package on every run, pull requests
+      # included, so packaging problems show up before merging. Retried once, because
+      # an xcodebuild crash in Apple's tools is not a problem with the app.
+      - name: Archive (unsigned)
+        run: |
+          archive() {
+            xcodebuild -project iosApp/AutoSyncTuner.xcodeproj -scheme AutoSyncTuner \
+              -configuration Release -destination 'generic/platform=iOS' \
+              -archivePath "$RUNNER_TEMP/AutoSyncTuner.xcarchive" \
+              CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+              archive > "$RUNNER_TEMP/archive.log" 2>&1
+          }
+          if ! archive; then
+            tail -n 40 "$RUNNER_TEMP/archive.log"
+            if grep -q "INTERNAL ERROR\|Uncaught Exception" "$RUNNER_TEMP/archive.log"; then
+              echo "::warning::xcodebuild crashed; resetting the simulator service and retrying once"
+              sudo killall -9 com.apple.CoreSimulator.CoreSimulatorService 2>/dev/null || true
+              sleep 5
+              archive || { tail -n 60 "$RUNNER_TEMP/archive.log"; exit 1; }
+            else
+              exit 1
+            fi
+          fi
+          tail -n 5 "$RUNNER_TEMP/archive.log"
+
+      - name: Sign and upload to TestFlight
         if: env.ASC_KEY_ID != '' && github.ref == 'refs/heads/main'
         run: |
           # Pasted IDs sometimes pick up stray spaces or line breaks.
@@ -145,15 +173,7 @@ jobs:
           AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
           sed -i '' "s/TEAM_ID_PLACEHOLDER/$APPLE_TEAM_ID/" iosApp/ExportOptions.plist
 
-          xcodebuild -project iosApp/AutoSyncTuner.xcodeproj -scheme AutoSyncTuner \
-            -configuration Release -destination 'generic/platform=iOS' \
-            -archivePath "$RUNNER_TEMP/AutoSyncTuner.xcarchive" \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            archive | tail -n 60
-          [ "${PIPESTATUS[0]}" = 0 ] || exit 1
-
-          # The archive is built unsigned; the export signs it for the App Store
+          # The archive was built unsigned; the export signs it for the App Store
           # (Apple creates the distribution certificate/profile through the API key).
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/AutoSyncTuner.xcarchive" \
             -exportOptionsPlist iosApp/ExportOptions.plist -exportPath "$RUNNER_TEMP/export" \
